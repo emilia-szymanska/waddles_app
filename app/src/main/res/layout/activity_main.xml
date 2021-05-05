@@ -74,10 +74,9 @@
             android:layout_gravity="center_horizontal" />
 
         <Button
-            android:id="@+id/refresh"
+            android:id="@+id/tryConnecting"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#ffffff"
             android:layout_gravity="center"
             android:backgroundTint="@color/blackberry"
             android:text="@string/tryConnecting" />
@@ -88,7 +87,7 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/tryConnecting"
+                android:id="@+id/refresh"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
