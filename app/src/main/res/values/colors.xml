@@ -8,6 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="blackberry">#3b062c</color>
+    <color name="dark_blackberry">#030912</color>
     <color name="dark_purple">#4B1636</color>
     <color name="purple">#761F53</color>
     <color name="shady_pink">#A73678</color>
