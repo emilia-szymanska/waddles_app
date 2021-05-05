@@ -1,6 +1,93 @@
 package com.example.waddles_app;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.Intent;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Handler;
+
+
 public class BluetoothConnection {
+
+    private Context context;
+    private BluetoothAdapter btAdapter;
+    private BluetoothSocket btSocket;
+    private BluetoothDevice btDevice;
+    private OutputStream btOutStream;
+    private InputStream btIStream;
+    private String label;
+    private Map<String, BluetoothDevice> deviceMap = new HashMap<String, BluetoothDevice>(); ;
+    private static final UUID MY_UUID = UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
+
+    public BluetoothConnection(Context context) {
+        this.context = context;
+    }
+
+    public BluetoothConnection(Context context, String device) {
+        this.context = context;
+        findBT();
+
+    }
+
+
+    public List<String> findBT() {
+        List<String> devicesList = new ArrayList<String>();
+        btAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        if(btAdapter == null) {
+            label = "No BT Adapter available";
+            return devicesList;
+        }
+
+        if(!btAdapter.isEnabled()) {
+            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            enableBluetooth.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(enableBluetooth);
+        }
+
+        Set<BluetoothDevice> pairedDevices = btAdapter.getBondedDevices();
+
+        if(pairedDevices.size() > 0) {
+            for(BluetoothDevice device : pairedDevices) {
+                devicesList.add(device.getName());
+                deviceMap.put(device.getName(), device);
+            }
+        }
+        else{
+            devicesList.add("No paired devices");
+        }
+        return devicesList;
+    }
+
+    public synchronized void connect(String deviceName) {
+        BluetoothDevice device = deviceMap.get(deviceName);
+        btSocket = null;
+        // Get a BluetoothSocket for a connection with the
+        // given BluetoothDevice
+        try {
+            btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+        } catch (IOException e) {
+            System.out.println("Failed to create RfcommSocket");
+        }
+        try{
+            btSocket.connect();
+        } catch (Exception e){
+            System.out.println(e);
+            System.out.println("Failed to connect the socket");
+        }
+
+    }
 }
 
 
