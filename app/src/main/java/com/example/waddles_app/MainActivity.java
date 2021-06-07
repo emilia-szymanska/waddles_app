@@ -3,6 +3,7 @@ package com.example.waddles_app;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.view.View;
@@ -10,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +20,9 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private ListView listView;
     private Button refresh, connect, next;
+    static TextView state, additionalInfo;
     private BluetoothConnection bt;
+    private Thread connectThread;
     private String selectedDevice;
 
     @Override
@@ -38,24 +42,14 @@ public class MainActivity extends AppCompatActivity {
         refresh = (Button) findViewById(R.id.refresh);
         connect = (Button) findViewById(R.id.tryConnecting);
         next = (Button) findViewById(R.id.next);
+        state = (TextView) findViewById(R.id.state);
+        additionalInfo = (TextView) findViewById(R.id.additional_info);
 
         refresh.setEnabled(true);
         connect.setEnabled(false);
         next.setEnabled(false);
 
         List<String> devices = bt.findBT();
-        System.out.println("=====================");
-        System.out.println(devices);
-        System.out.println("---------------------");
-        // Create a List from String Array elements
-        //final List<String> fruits_list = new ArrayList<String>(Arrays.asList(cars));
-
-        // Create an ArrayAdapter from List
-        //final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>
-         //       (this, android.R.layout.simple_list_item_1, fruits_list);
-
-        // DataBind ListView with items from ArrayAdapter
-        //listView.setAdapter(arrayAdapter);
 
         listView.setAdapter(new ArrayAdapter<String>(this, R.layout.liststyle, R.id.textView2, devices));
 
@@ -65,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
                 selectedDevice = (String) parent.getItemAtPosition(position);
                 view.setSelected(true);
                 connect.setEnabled(true);
-                // Anything
             }
         });
 
@@ -73,32 +66,73 @@ public class MainActivity extends AppCompatActivity {
         refresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(bt.isConnected()) bt.disconnect();
                 connect.setEnabled(false);
                 next.setEnabled(false);
+                updateTexts("waiting for connection", "");
                 List<String> devices = bt.findBT();
                 listView.setAdapter(new ArrayAdapter<String>(getApplicationContext(), R.layout.liststyle, R.id.textView2, devices));
-                //TelephonyManager tManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
-                //String uuid = tManager.getDeviceId();
-                //System.out.println(uuid);
             }
         });
+
 
         connect.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-                System.out.println(selectedDevice);
-                Thread tmp = new Thread()
+                connectThread = new Thread()
                 {
                     public void run()
                     {
-                        bt.connect(selectedDevice);
+                        runOnUiThread(new UpdateTextRunnable("CONNECTING...", " "));
+                        Integer result = bt.connect(selectedDevice);
+                        switch(result){
+                            case 0: runOnUiThread(new UpdateTextRunnable("CONNECTED", " "));
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            next.setEnabled(true);
+                                        }
+                                    });
+                                    break;
+                            case 1: runOnUiThread(new UpdateTextRunnable("FAILURE", "Failed to create socket"));
+                                    break;
+                            case 2: runOnUiThread(new UpdateTextRunnable("FAILURE", "Failed to connect the socket"));
+                                    break;
+                            default: runOnUiThread(new UpdateTextRunnable("ERROR", ""));
+                                     break;
+                        }
                     }
                 };
-                tmp.start();
+                connectThread.start();
+            }
+        });
 
 
+        next.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                if (connectThread.isAlive()) {
+                    connectThread.interrupt();
+                    try {
+                        connectThread.join();
+                    }
+                    catch (Exception ex) {
+                        System.out.println("Caught an exception while killing a thread");
+                    }
+                }
 
+                Intent changeToArrows = new Intent(MainActivity.this, ArrowActivity.class);
+                startActivity(changeToArrows);
             }
         });
     }
+
+    public static void updateTexts(String stateTxt, String additionalTxt)
+    {
+        additionalInfo.setText(additionalTxt);
+        state.setText(stateTxt);
+        state.invalidate();
+        state.requestLayout();
+    }
 }
+

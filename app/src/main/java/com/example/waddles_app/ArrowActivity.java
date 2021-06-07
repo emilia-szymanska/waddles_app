@@ -17,8 +17,6 @@ public class ArrowActivity extends AppCompatActivity
 
     private ImageButton up, down, left, right, center, previous, upleftarrow, uprightarrow, downleftarrow, downrightarrow;
     BluetoothConnection bt;
-    Bundle bundle;
-    Intent intent;
     String message = "";
 
 
@@ -36,13 +34,7 @@ public class ArrowActivity extends AppCompatActivity
         int width = Resources.getSystem().getDisplayMetrics().widthPixels;
 
         setContentView(R.layout.arrow_activity);
-
-
-        intent      = getIntent();
-        bundle      = this.getIntent().getExtras();
-
-        myUdpClient = new UDPClient(udpAddress, updPort);
-        myUdpClient.setSocket();
+        bt = new BluetoothConnection(getApplicationContext());
 
         up              = findViewById(R.id.uparrow);
         down            = findViewById(R.id.downarrow);
@@ -55,14 +47,17 @@ public class ArrowActivity extends AppCompatActivity
         downleftarrow   = findViewById(R.id.downleftarrow);
         downrightarrow  = findViewById(R.id.downrightarrow);
 
+        up.setImageResource(R.drawable.image_btn_src);
+
+
 
         Thread btThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while(!Thread.currentThread().isInterrupted()) {
                     try {
-                        bt.sendCommand(message);
                         System.out.println(message);
+                        bt.sendCommand(message);
                         Thread.sleep(50);
                     }
                     catch(Exception e) {
@@ -263,6 +258,7 @@ public class ArrowActivity extends AppCompatActivity
             @Override
             public void onClick(View v)
             {
+                bt.disconnect();
                 closeThread(btThread);
 
                 Intent changeToMain = new Intent(ArrowActivity.this, MainActivity.class);
