@@ -5,10 +5,12 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
+import android.os.ParcelUuid;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,26 +20,24 @@ import java.util.UUID;
 import java.util.logging.Handler;
 
 
-public class BluetoothConnection {
+public class BluetoothConnection{
 
-    private Context context;
-    private BluetoothAdapter btAdapter;
-    private BluetoothSocket btSocket;
+    static BluetoothAdapter btAdapter;
+    static BluetoothSocket btSocket;
+    static OutputStream btOutStream;
+    static InputStream btInStream;
+    static BluetoothDevice chosenDevice;
+    static Map<String, BluetoothDevice> deviceMap = new HashMap<String, BluetoothDevice>();
+
     private BluetoothDevice btDevice;
-    private OutputStream btOutStream;
-    private InputStream btIStream;
     private String label;
-    private Map<String, BluetoothDevice> deviceMap = new HashMap<String, BluetoothDevice>(); ;
-    private static final UUID MY_UUID = UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
+    private Context context;
+    private Boolean connected = false;
+
+//    private static final UUID MY_UUID = UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
 
     public BluetoothConnection(Context context) {
         this.context = context;
-    }
-
-    public BluetoothConnection(Context context, String device) {
-        this.context = context;
-        findBT();
-
     }
 
 
@@ -70,23 +70,69 @@ public class BluetoothConnection {
         return devicesList;
     }
 
-    public synchronized void connect(String deviceName) {
-        BluetoothDevice device = deviceMap.get(deviceName);
-        btSocket = null;
-        // Get a BluetoothSocket for a connection with the
-        // given BluetoothDevice
+    public synchronized Integer connect(String deviceName) {
+        chosenDevice = deviceMap.get(deviceName);
+        ParcelUuid[] uuids = chosenDevice.getUuids();
+
         try {
-            btSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            btSocket = chosenDevice.createRfcommSocketToServiceRecord(uuids[0].getUuid());
         } catch (IOException e) {
             System.out.println("Failed to create RfcommSocket");
+            return 1;
         }
         try{
             btSocket.connect();
+            btOutStream = btSocket.getOutputStream();
+            btInStream = btSocket.getInputStream();
         } catch (Exception e){
             System.out.println(e);
             System.out.println("Failed to connect the socket");
+            return 2;
+        }
+        return 0;
+    }
+
+    public synchronized void disconnect(){
+        if (btInStream != null) {
+            try {btInStream.close();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            btInStream = null;
         }
 
+        if (btOutStream != null) {
+            try {
+                btOutStream.close();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            btOutStream = null;
+        }
+
+        if (btSocket != null) {
+            try {
+                btSocket.close();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+            btSocket = null;
+        }
+        chosenDevice = null;
+    }
+
+    public void sendCommand(String command){
+        try{
+            btOutStream.write(command.getBytes());
+            System.out.println(command);
+        }
+        catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    public Boolean isConnected(){
+        return connected;
     }
 }
 
@@ -131,34 +177,6 @@ public class MyBluetooth {
         this.myLabel = myLabel;
     }
 
-    public void findBT() {
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        if(mBluetoothAdapter == null) {
-            myLabel.setText("No bluetooth adapter available");
-        }
-
-        if(!mBluetoothAdapter.isEnabled()) {
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            enableBluetooth.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(enableBluetooth);
-        }
-
-
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        if(pairedDevices.size() > 0)
-        {
-            for(BluetoothDevice device : pairedDevices)
-            {
-                if(device.getName().equals("Pogodynka"))
-                {
-                    mmDevice = device;
-                    break;
-                }
-            }
-        }
-        myLabel.setText("Device found");
-    }
 
     public void openBT() throws IOException {
         if(mmDevice == null) {
